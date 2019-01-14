@@ -1,0 +1,19 @@
+
+$ pkill keept
+
+./keept a asock   : - No live socket to attach to
+./keept am asock  : - Cannot do both 'a' and 'm'
+./keept an asock  : - Cannot do both 'a' and 'n'
+./keept . asock   : - '.': unknown flag
+./keept m asock   : - Command (and args) missing
+
+./keept n asock sleep 999  : - succeeds (asock for next tests)
+
+./keept n asock            : - Command (and args) missing
+./keept n asock sleep 999  : - Connected to live socket when command is to ...
+./keept a asock sleep 999  : - succeeds (command and args ignored)
+
+
+perl -le 'sub z() { $x; wait; print $?}; $x = fork; $x && { &z() } || {sleep 1}'; sleep .5
+perl -le 'sub z() { $x; wait; print $?}; $x = fork; $x && { &z() } || {exit 3}'; sleep .5
+perl -le 'sub z() { $x; kill "ALRM", $x; wait; print $?}; $x = fork; $x && { &z() } || {sleep 1}'; sleep .5

@@ -1,0 +1,159 @@
+
+NAME
+
+  keept - keep pseudo terminal (with (multi) attach/detach)
+
+
+SYNOPSIS
+
+  keept FLAGS socket [OPTS] [COMMAND [ARG]...]
+
+
+DESCRIPTION
+
+  KeePt runs command under a separate pseudo terminal and keeps the master
+  side open in a daemon process.
+
+  User may then (re)connect to this daemon process and get terminal access
+  to the command running there.
+
+  The unix domain socket used to connect to the daemon process can accept
+  multiple simultaneous connections and user may disconnect any of the
+  connections at will.
+
+  This interface works pretty much like what dtach(1) provides, but the
+  feature set is slightly different. screen(1) and tmux(1) are more versatile
+  alternatives whenever needed.
+
+
+OPTIONS
+
+  KeePt tries to provide convenient command line interface to the users,
+  YMMV. To reach this SYNOPSIS is divided in 3 parts: flags, socket,
+  optiond and process command line arguments.
+
+  FLAGS
+
+    q:   redraw mode is none -- when reconnecting to keept daemon don't request
+         anything to be done in this sense. window size does not change
+
+    b:   redraw mode buffer -- request keept daemon to send the contents of
+         circular buffer that contains last output to client. with this flag
+         buffer size defaults to 1024, otherwise it is zero (0) (see -s below)
+
+    bw:  in addition to the above, client sends window size information and
+         if it differs what daemon thinks WINCH is sent to process
+
+    l:   redraw mode is ctrl-l: daemon writes ctrl-l to process and it responds
+         as it wishes (e.g. emacs will redraw its window). window size is
+         not changing
+
+    lw:  if client and daemon agrees on window size, ctrl-l is sent, if not
+         WINCH is sent to the process
+
+    w:   WINCH is sent to the process
+
+    W/o any of the above, redraw mode is what was given when KeePt started,
+    and if none was given at that time, 'lw' is the default
+
+    a:  attach only -- if COMMAND [ARG] were given, those are ignored. If
+        socket is not live, exit
+
+    n:  execute COMMAND [ARG] but no attach. print failure if there command
+        is not given
+
+    m:  must create -- COMMAND [ARG] must be given and socket must not be
+        live when this flag is there
+
+    r:  when attaching, terminal input is discarded by client (and if daemon
+        got it, it would also discard received input)
+
+    x:  instead of sending WINCH to resize process running under keept daemon
+        (attempt to) resize client terminal using common escape sequences
+
+    t:  attach to the process under keept control even there is no local tty
+
+    z:  when (re)attaching, send ctrl-z as first input
+
+    @:  in system supporting "abstract socket namespace" (linux) bind/connect
+        to socket in abstract socket namespace.
+
+    -:  no-op -- provided for user convenience
+
+  socket
+
+    The socket name (filename or name in abstract socket namespace) what to
+    bind by keept daemon or where to connect by keept client. Unix domain
+    socket of SOCK_SEQPACKET type.
+
+    If filesystem socket exists and is not live, it is considerd as it did
+    not exist at all (unlinked before rebinding).
+
+  OPTIONS
+
+    -s size:  circular buffer size. 1024 is 'b' is given in FLAGS, circular
+              buffer size defaults to 1024, otherwise w/o this, there will
+              be no buffering
+
+    -g {rows}x{cols}:  instead of using current window size use the one given
+                       with this argument. most useful when there is no tty
+
+    -o filename:  do script(1) like logging to filename (no buffering). the
+                  file is initially unreadable (chmod 000) since e.g. cat(1)
+                  to the file would cause live loop and file filling up
+                  quickly
+
+  COMMAND [[ARG]...]
+
+    The command (and its arguments) to be executed when the socket argument
+    given is not available/live (and 'm' explicitly requests this).
+
+
+ESCAPE CHARARTER
+
+  The keept client detaches from keept daemon by entering Ctrl-Z on
+  attached terminal. Currently there is no way to disable or change
+  this character.
+
+  Ctrl-Z can be sent to process with 'z' flag in keept command line
+  (i.e. reattach after ctrl-z with 'z' in FLAGS argument).
+
+
+ENVIRONMENT
+
+  KeePt gets its environment from (grand)parent process, and process started
+  by keept from keept.
+
+  KEEPT_PID  is added to keept environment before it starts its child
+             process. It is internally used by keept to avoid re-attaching
+             keept socket, which would be problematic.
+
+  KEEPT_SOCKARG  contains the value of socket argument verbatim. Users
+                 may find use for it...
+
+
+EXAMPLE
+
+  keept bw a-socket zsh
+
+
+SEE ALSO
+
+  screen(1), dtach(1), tmux(1), script(1)
+
+
+BUGS
+
+  No known ones, but some things are unresolvable.
+
+
+AUTHOR
+
+  Tomi Ollila <tomi.ollila@iki.fi>
+
+
+LICENSE
+
+  2-Clause (Simplified) BSD license. See LICENSE file for details.
+
+.
