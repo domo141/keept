@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Mon 14 Jan 2019 22:02:35 +0200 too
+ * Last modified: Thu 09 May 2019 23:20:32 +0300 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -262,7 +262,7 @@ static int connect_usock(const char * path BOOL_ABSTRACT_SOCKET)
 //       (that's even fewer opcodes that takes the same space...)
 struct {
     union {
-	int status; // serve()
+	volatile int status; // serve()
 	struct {
 	    bool _read_only;
 	    bool _send_ctrl_z;
@@ -281,7 +281,7 @@ struct {
 	struct termios saved_tio; // attached()
 	struct {
 	    pid_t pid; // serve() (+ wait_attach_a_while)
-	    int mpfd; // serve()
+	    volatile int mpfd; // serve()
 	} s;
     } u2;
 } G;
@@ -579,7 +579,7 @@ static pid_t serve(int ss, int o, const char ** argv)
     /* complete daemonize */
     xmovefd(pty, 1); xdup2(o, 2); setsid();
     if (o != 0) close(o);
-    /* fd 2 is now either server socket or log file-- having log file at
+    /* fd 2 is now either server socket or log file -- having log file at
        fd 2 helps dev testing as any function can write there (stderr!)
        (tester just needs to give outfile (-o) option) */
 
@@ -596,6 +596,7 @@ static pid_t serve(int ss, int o, const char ** argv)
     close(tty);
     set_nonblock(1); // pty
     G.u2.s.pid = pid;
+    G.u2.s.mpfd = 0;
     BE;
 
     G.u1.status = -1;
@@ -724,7 +725,6 @@ static pid_t serve(int ss, int o, const char ** argv)
     // We may have already received SIGCHLD (if waitpid() succeeded,
     // G.u1.status >= 0). If not, SIGCHLD (and G.u1.status change) may
     // happen at any moment below.
-
     if (G.u1.status >= 0) { alarm(0); goto _exit; }
 
     BB;
@@ -743,7 +743,7 @@ static pid_t serve(int ss, int o, const char ** argv)
 	if (pfds[1].revents) {
 	    // here if signal handler wrote byte to (pipe) fd 1
 	    (void)read(1, buf, sizeof buf);
-	    if (G.u1.status != 0) goto _exit;
+	    if (G.u1.status >= 0) goto _exit;
 	}
 	if (pfds[0].revents) {
 	    int s = accept(0, null, null);
