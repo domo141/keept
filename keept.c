@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Thu 09 May 2019 23:20:32 +0300 too
+ * Last modified: Sun 12 May 2019 13:24:53 +0300 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -334,6 +334,7 @@ enum {
     // could be anything, that is same in big and little endian encoding
     BYTES = (int32_t)0xb7aaaab7,
     CINIT = 0x1b17171b,
+    RDMODE = (int32_t)0x3d50503d,
     WINSIZ = (int32_t)0xa5c8c8a5,
     CEXIT = (int32_t)0xe81717e8
 };
@@ -370,7 +371,11 @@ static int attached(int s)
     (*(uint32_t *)buf) = (uint32_t)CINIT;
     buf[4] = G.cols >> 8; buf[5] = G.cols & 0xff;
     buf[6] = G.rows >> 8; buf[7] = G.rows & 0xff;
-    buf[8] = G.redraw_mode;
+    if (G.redraw_mode & 128) {
+	buf[8] = 1; // immediate first connection //
+	G.redraw_mode &= 127;
+    } else
+	buf[8] = G.redraw_mode;
     buf[9] = G.read_only;
     buf[10] = G.winsize_client;
     buf[11] = G.send_ctrl_z;
@@ -390,18 +395,22 @@ static int attached(int s)
 		if (l < 0) die("STDIN read failure:");
 		else die("STDIN EOF!");
 	    }
-	    int i;
-	    for (i = 0; i < l; i++) {
-		if (buf[i + 4] == '\032') { // ctrl-z
-		    l = i; i = 0;
-		    break;
+	    if (l == 1) {
+		if (buf[4] == '\032') /* ctrl-z */ detach(0);
+
+		if (buf[4] == '\014' && ! G.read_only && G.redraw_mode >= 4) {
+		    // ctrl-l pressed and redraw mode & ( l | w ) and ...
+		    // note: serve() sends signal to child if size changes
+		    *((uint32_t *)buf + 3) = (uint32_t)WINSIZ;
+		    buf[16] = G.cols >> 8; buf[17] = G.cols & 0xff;
+		    buf[18] = G.rows >> 8; buf[19] = G.rows & 0xff;
+		    write/*fully*/(s, buf + 12, 8);
 		}
 	    }
-	    if (l > 0 && ! G.read_only) {
+	    if (! G.read_only) {
 		(*(uint32_t *)buf) = (uint32_t)BYTES;
 		write/*fully*/(s, buf, l + 4);
 	    }
-	    if (i == 0) detach(0);
 	}
 	if (pfds[1].revents) {
 	    int len;
@@ -411,6 +420,10 @@ static int attached(int s)
 
 		if ((*(uint32_t*)buf) == (uint32_t)BYTES) {
 		    write/*fully*/(1, buf + 4, len - 4);
+		    continue;
+		}
+		if ((*(uint32_t*)buf) == (uint32_t)RDMODE) {
+		    G.redraw_mode = buf[4] & 15;
 		    continue;
 		}
 		if ((*(uint32_t*)buf) == (uint32_t)CEXIT) {
@@ -453,27 +466,28 @@ static int attached(int s)
     return 0;
 }
 
-static bool winsize_to_tty(const unsigned char * colsrows, bool force)
+static bool winsize_to_tty(const unsigned char * colsrows)
 {
     struct winsize ws = {
 	.ws_col = (colsrows[0] << 8) + colsrows[1],
 	.ws_row = (colsrows[2] << 8) + colsrows[3]
     };
-    if (ws.ws_col == 0 || ws.ws_row == 0) return 0;
-    if (!force && ws.ws_col == G.cols && ws.ws_row == G.rows) return 0;
+    if (ws.ws_col == 0 || ws.ws_row == 0) return false;
+    // no point send WINSIZ is size does not change -- child not signaled //
+    if (ws.ws_col == G.cols && ws.ws_row == G.rows) return false;
 
 #if 0 // test print: need -o file cmd line option...
 #warning if 0 here
-    fprintf(stderr, "%d %d %d %d\n",
+    fprintf(stderr, "%s: %d <- %d x %d <- %d\n", __func__,
 	    ws.ws_col, G.cols, ws.ws_row, G.rows);
 #endif
 
     if (ioctl(1, TIOCSWINSZ, &ws) == 0) {
 	G.cols = ws.ws_col;
 	G.rows = ws.ws_row;
-	return 1;
+	return true;
     }
-    return 0;
+    return false;
 }
 
 static void log_date(int fd, const char * w)
@@ -605,6 +619,8 @@ static pid_t serve(int ss, int o, const char ** argv)
     sigact(SIGALRM, sigalrmhandler, 0);
     sigact(SIGPIPE, SIG_IGN, 0);
 
+    if (G.redraw_mode == 0) G.redraw_mode = 12; // 'wl'
+
 #define MAXCONNS 128 // actually, 126 for connections...
     struct pollfd pfds[MAXCONNS] = {
 	[0] = { .fd = 0 }, // server socket
@@ -659,8 +675,8 @@ static pid_t serve(int ss, int o, const char ** argv)
 			continue;
 		    }
 		    if ((*(uint32_t*)buf) == (uint32_t)WINSIZ) {
-			// window size change //
-			if (len == 8) winsize_to_tty(&buf[4], false);
+			// window size change (perhaps) //
+			if (len == 8) winsize_to_tty(&buf[4]);
 			continue;
 		    }
 		    if ((*(uint32_t*)buf) == (uint32_t)CINIT) {
@@ -668,8 +684,11 @@ static pid_t serve(int ss, int o, const char ** argv)
 			if (len != 12) goto drop_conn1;
 			if (buf[11]) write(1, "\032", 1); // ctrl-z
 			if (buf[8] == 0) { // no redraw mode option given
-			    if (G.redraw_mode == 0) G.redraw_mode = 12;
 			    buf[8] = G.redraw_mode;
+			    unsigned char resp[8];
+			    (*(uint32_t *)resp) = (uint32_t)RDMODE;
+			    resp[4] = G.redraw_mode;
+			    write(pfds[i].fd, resp, 5);
 			}
 			if (buf[10]) { // winsize_to_kilent
 			    buf[8] &= ~8;
@@ -679,7 +698,7 @@ static pid_t serve(int ss, int o, const char ** argv)
 			    resp[6] = G.rows >> 8; resp[7] = G.rows & 0xff;
 			    write(pfds[i].fd, resp, 8);
 			}
-			if (buf[8] == 2) { // redraw mode 'buffer'
+			if (buf[8] & 2) { // redraw mode 'buffer'
 			    if (crrbuf) {
 				struct iovec iov[3];
 				int iolen = crrbuf_data(crrbuf, &iov[1]);
@@ -694,12 +713,12 @@ static pid_t serve(int ss, int o, const char ** argv)
 				if (rv != count) goto drop_conn1;
 			    }
 			}
-			else if (buf[8] & 8) { // redraw mode 'winch'
+			if (buf[8] & 8) { // redraw mode 'winch'
 			    if (buf[8] & 4) { // but if also 'ctl-l'...
-				bool resized = winsize_to_tty(&buf[4], false);
+				bool resized = winsize_to_tty(&buf[4]);
 				if (! resized) write(1, "\f", 1); // ctrl-l
 			    }
-			    else winsize_to_tty(&buf[4], true);
+			    else winsize_to_tty(&buf[4]);
 			}
 			else if (buf[8] & 4) write(1, "\f", 1); // ctrl-l
 			// ...and no redraw if buf[8] == 1
@@ -719,12 +738,13 @@ static pid_t serve(int ss, int o, const char ** argv)
 	    }
 	}
     }
-#   define drop_conn1 fix_goto_target_label
+#   define drop_conn1 fix_goto_target_label_in_code_below
 
     // Here when reading from pty returned 0 or -1.
     // We may have already received SIGCHLD (if waitpid() succeeded,
     // G.u1.status >= 0). If not, SIGCHLD (and G.u1.status change) may
     // happen at any moment below.
+
     if (G.u1.status >= 0) { alarm(0); goto _exit; }
 
     BB;
@@ -768,9 +788,11 @@ static pid_t serve(int ss, int o, const char ** argv)
 		    if (len < 5) continue;
 
 		    if ((*(uint32_t*)buf) == (uint32_t)BYTES) {
+			// waiting for child exit, no reader there //
 			continue;
 		    }
 		    if ((*(uint32_t*)buf) == (uint32_t)WINSIZ) {
+			// ditto //
 			continue;
 		    }
 		    if ((*(uint32_t*)buf) == (uint32_t)CINIT) {
@@ -778,10 +800,10 @@ static pid_t serve(int ss, int o, const char ** argv)
 			if (len != 12) goto drop_conn2;
 			if (buf[8] == 0) { // no redraw mode option given
 			    buf[8] = G.redraw_mode;
+			    // here we don't care inform client anymore
 			}
-			if (buf[8] == 2) { // redraw mode 'buffer'
+			if (buf[8] & 2) { // redraw mode 'buffer'
 			    if (crrbuf) {
-				buf[8] |= ~2;
 				struct iovec iov[3];
 				int iolen = crrbuf_data(crrbuf, &iov[1]);
 				unsigned char lb[4];
@@ -798,7 +820,7 @@ static pid_t serve(int ss, int o, const char ** argv)
 			WriteCS(pfds[i].fd, "\r\n[EOF]\r\n");
 			continue;
 		    }
-		    }
+		}
 		// fall to drop_conn2 (unknown request) if no match above
 	    drop_conn2:
 		close(pfds[i].fd);
@@ -848,7 +870,7 @@ int main(int argc, const char * argv[])
 	case 'm': must_create = true; break;
 	case 'r': G.read_only = true; break;
 	case 'q': G.redraw_mode = 1;  break; // none   \.
-	case 'b': G.redraw_mode = 2;  break; // buffer  \.
+	case 'b': G.redraw_mode |= 2; break; // buffer  \.
 	case 'l': G.redraw_mode |= 4; break; // ctrl-l   |- rest logic in serve
 	case 'w': G.redraw_mode |= 8; break; // winch   /'
 	case 't': notty_ok = true;    break;
@@ -1048,7 +1070,7 @@ int main(int argc, const char * argv[])
 	errno = -s; // hmm, not happy but...
 	die("Connecting to socket failed:");
     }
-    G.redraw_mode = 1; // 'none' for immediate 1st connection
+    G.redraw_mode = G.redraw_mode | 128; // bit 7 for immediate first connection
     return attached(s);
 }
 
