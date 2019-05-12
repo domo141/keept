@@ -30,31 +30,40 @@ OPTIONS
 
   KeePt tries to provide convenient command line interface to the users,
   YMMV. To reach this SYNOPSIS is divided in 3 parts: flags, socket,
-  optiond and process command line arguments.
+  options and process command line arguments.
 
   FLAGS
+    Connection time redraw flags:
 
     q:   redraw mode is none -- when reconnecting to keept daemon don't request
-         anything to be done in this sense. window size does not change
+         anything to be done in this sense. window size does not change. this
+         option unsets all previosly given 'b', 'w' or 'l' options (if any)
 
     b:   redraw mode buffer -- request keept daemon to send the contents of
          circular buffer that contains last output to client. with this flag
          buffer size defaults to 1024, otherwise it is zero (0) (see -s below)
 
     bw:  in addition to the above, client sends window size information and
-         if it differs what daemon thinks WINCH is sent to process
+         if it differs what daemon thinks WINCH is sent to process (may be
+         useful e.g. for curl(1) to change width of the progress bar)
 
     l:   redraw mode is ctrl-l: daemon writes ctrl-l to process and it responds
          as it wishes (e.g. emacs will redraw its window). window size is
-         not changing
+         not changing (at this time)
 
     lw:  if client and daemon agrees on window size, ctrl-l is sent, if not
          WINCH is sent to the process
 
-    w:   WINCH is sent to the process
+    w:   WINCH is sent to the process (if terminal size changes)
 
-    W/o any of the above, redraw mode is what was given when KeePt started,
-    and if none was given at that time, 'lw' is the default
+    Without any of the above, connection time redraw mode is what was given
+    when KeePt started, and if none was given at that time, 'lw' is used.
+
+    The above flags affect how ctrl-l is handled from user input; if either
+    'l' or 'w' is active, window size will first be communicated to the daemon
+    -- and if size differs, WINCH is sent to the process.
+
+    Other flags:
 
     a:  attach only -- if COMMAND [ARG] were given, those are ignored. If
         socket is not live, exit
