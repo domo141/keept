@@ -14,7 +14,7 @@ CFLAGS = -std=c99 -O2
 all: keept keept.1
 
 keept: $(KEEPT_OBJS)
-	$(CC) -o $@ $(KEEPT_OBJS) -lutil
+	$(CC) -o $@ $(KEEPT_OBJS) -lutil -lbsd
 
 VS = keept 1.0
 VD = 2019-01-14

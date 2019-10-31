@@ -20,6 +20,7 @@
 #include "more-warnings.h"
 
 #include <unistd.h>
+#include <bsd/unistd.h>  // closefrom()
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1005,7 +1006,7 @@ int main(int argc, const char * argv[])
 	else G.tty = true;
     }
 
-    for (int i = 3; i < 10; i++) close(i);
+    closefrom(3);
 
     int s = connect_usock(sockname OPTARG_ABSTRACT_SOCKET);
     if (s >= 0) {
