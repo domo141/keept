@@ -8,7 +8,8 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Fri 01 Nov 2019 23:55:28 +0200 too
+ * Last modified. Sat 02 Nov 2019 19:22:09 +0100 bAndie91
+ * Last modified: Sun 03 Nov 2019 16:48:33 +0200 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -135,6 +136,9 @@ static void usage(const char * prgname, int more)
 		"     z: send ctrl-z when attaching" nl
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
 		"     @: use socket in abstract namespace" nl
+		"     u: remove pathname socket at the end" nl
+#else
+		"     u: remove socket at the end" nl
 #endif
 		"  options:" nl
 		"    -s size: circular buffer size of latest output stored" nl
@@ -859,6 +863,7 @@ int main(int argc, const char * argv[])
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
     bool abstract_socket = false;
 #endif
+    bool remove_socket = false;
     for (int c, i = 0; (c = argv[1][i]); i++) {
 	dbg1(c, c);
 	switch (c) {
@@ -877,6 +882,7 @@ int main(int argc, const char * argv[])
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
 	case '@': abstract_socket = true; break;
 #endif
+	case 'u': remove_socket = true; break;
 	default:
 	    die("'%c': unknown flag", c);
 	}
@@ -982,7 +988,8 @@ int main(int argc, const char * argv[])
     struct stat statbuf; statbuf.st_mode = 0;
 
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
-    if (! abstract_socket)
+    if (abstract_socket) remove_socket = false;
+    else
 #endif
 	(void)stat(sockname, &statbuf);
 
@@ -1069,7 +1076,10 @@ int main(int argc, const char * argv[])
 	die("Connecting to socket failed:");
     }
     G.redraw_mode = G.redraw_mode | 128; // bit 7 for immediate first connection
-    return attached(s);
+    int aret = attached(s);
+    if (remove_socket)
+	unlink(sockname); // ignore any error (socket file may have been moved)
+    return aret;
 }
 
 /*
