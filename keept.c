@@ -136,6 +136,7 @@ static void usage(const char * prgname, int more)
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
 		"     @: use socket in abstract namespace" nl
 #endif
+		"     S: remove socket at the end" nl
 		"  options:" nl
 		"    -s size: circular buffer size of latest output stored" nl
 		"    -g {rows}x{cols}: initial window size" nl
@@ -861,6 +862,7 @@ int main(int argc, const char * argv[])
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
     bool abstract_socket = false;
 #endif
+    bool remove_socket = false;
     for (int c, i = 0; (c = argv[1][i]); i++) {
 	dbg1(c, c);
 	switch (c) {
@@ -879,6 +881,7 @@ int main(int argc, const char * argv[])
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
 	case '@': abstract_socket = true; break;
 #endif
+	case 'S': remove_socket = true; break;
 	default:
 	    die("'%c': unknown flag", c);
 	}
@@ -1071,7 +1074,9 @@ int main(int argc, const char * argv[])
 	die("Connecting to socket failed:");
     }
     G.redraw_mode = G.redraw_mode | 128; // bit 7 for immediate first connection
-    return attached(s);
+    int aret = attached(s);
+    if(remove_socket) unlink(sockname);  // ignore any error (socket file may has been moved)
+    return aret;
 }
 
 /*
