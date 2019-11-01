@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Sun 12 May 2019 13:24:53 +0300 too
+ * Last modified: Fri 01 Nov 2019 23:55:28 +0200 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -342,13 +342,11 @@ enum {
 // global data buffer used almost everywhere (and a bit risky...)
 unsigned char buf[4096];
 
-static void exitmsg_to_fd(int fd, bool normal_exit, uint8_t status)
+static void write_exitmsg(bool normal_exit, uint8_t status)
 {
     const char * s = normal_exit? "keept: exit": "terminated by signal";
-    int l = snprintf((char *)buf, sizeof buf,
-		     // XXX fd value depencency/cohesion...
-		     fd == 2? "\n[%s %u]\n": "\r\n[%s %u]\r\n", s, status);
-    write(fd, buf, l);
+    int l = snprintf((char *)buf, sizeof buf, "\r\n[%s %u]\r\n", s, status);
+    write(2, buf, l);
 }
 
 static int attached(int s)
@@ -429,7 +427,7 @@ static int attached(int s)
 		if ((*(uint32_t*)buf) == (uint32_t)CEXIT) {
 		    // len check tba (highly unlikely != 6)
 		    int rv = buf[5];
-		    exitmsg_to_fd(1, buf[4], buf[5]);
+		    write_exitmsg(buf[4], buf[5]);
 		    return rv;
 		}
 		if ((*(uint32_t*)buf) == (uint32_t)WINSIZ) {
@@ -839,7 +837,7 @@ _exit:
     status = normal_exit? WEXITSTATUS(status): WTERMSIG(status);
 
     if (o != 0) {
-	exitmsg_to_fd(2, normal_exit, status & 0xff);
+	write_exitmsg(normal_exit, status & 0xff);
 	log_date(2, "done");
     }
     (*(uint32_t *)buf) = (uint32_t)CEXIT;
