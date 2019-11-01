@@ -277,8 +277,8 @@ struct {
 #if defined (__LP64__) && __LP64__
 //  uint32_t pad9; // apparently not needed
 #endif
+    struct termios saved_tio; // attached()
     union {
-	struct termios saved_tio; // attached()
 	struct {
 	    pid_t pid; // serve() (+ wait_attach_a_while)
 	    volatile int mpfd; // serve()
@@ -319,7 +319,7 @@ static void get_winsz(void)
 
 static void reset_tio(void)
 {
-    tcsetattr(0, TCSAFLUSH, &G.u2.saved_tio);
+    tcsetattr(0, TCSAFLUSH, &G.saved_tio);
 }
 
 static void detach(int n) __attribute__((noreturn));
@@ -355,7 +355,8 @@ static int attached(int s)
 {
     if (G.tty) {
 	if (G.cols == 0) get_winsz();
-	struct termios tio = G.u2.saved_tio;
+	struct termios tio;
+	tcgetattr(0, &tio);
 	// see ttydefaults.h and then compare w/ what other sw does here
 	cfmakeraw(&tio);
 	tio.c_cc[VMIN] = 1;
@@ -998,7 +999,7 @@ int main(int argc, const char * argv[])
 
     if (! no_attach) {
 	// could open /dev/tty on demand, but probably would not bring any bene
-	if (tcgetattr(0, &G.u2.saved_tio) < 0) {
+	if (tcgetattr(0, &G.saved_tio) < 0) {
 	    if (! notty_ok)
 		die("Fd 0 not on a tty... Use 'n' or 't' to continue anyway.");
 	}
