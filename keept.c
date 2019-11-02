@@ -881,7 +881,7 @@ int main(int argc, const char * argv[])
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
 	case '@': abstract_socket = true; break;
 #endif
-	case 'S': remove_socket = true; break;
+	case 'u': remove_socket = true; break;
 	default:
 	    die("'%c': unknown flag", c);
 	}
@@ -1075,7 +1075,7 @@ int main(int argc, const char * argv[])
     }
     G.redraw_mode = G.redraw_mode | 128; // bit 7 for immediate first connection
     int aret = attached(s);
-    if(remove_socket) unlink(sockname);  // ignore any error (socket file may has been moved)
+    if (remove_socket) unlink(sockname);  // ignore any error (socket file may have been moved)
     return aret;
 }
 
