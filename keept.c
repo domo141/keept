@@ -136,7 +136,7 @@ static void usage(const char * prgname, int more)
 #if HAVE_ABSTRACT_SOCKET_NAMESPACE
 		"     @: use socket in abstract namespace" nl
 #endif
-		"     S: remove socket at the end" nl
+		"     u: remove socket at the end" nl
 		"  options:" nl
 		"    -s size: circular buffer size of latest output stored" nl
 		"    -g {rows}x{cols}: initial window size" nl
