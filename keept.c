@@ -8,8 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified. Sat 02 Nov 2019 19:22:09 +0100 bAndie91
- * Last modified: Sun 03 Nov 2019 16:48:33 +0200 too
+ * Last modified: Sun 03 Nov 2019 18:32:40 +0200 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -284,7 +283,7 @@ struct {
     union {
 	struct termios saved_tio; // attached()
 	struct {
-	    pid_t pid; // serve() (+ wait_attach_a_while)
+	    pid_t pid; // serve()
 	    volatile int mpfd; // serve()
 	} s;
     } u2;
@@ -297,9 +296,6 @@ struct {
 
 // recycling...(for now) // may_have_sig may also be unnecessary
 #define may_have_sig send_ctrl_z
-
-//
-#define wait_attach_a_while u2.s.pid
 
 // attached() uses this, in one way. serve() uses other signal handlers...
 static void sighandler(int sig)
@@ -541,7 +537,7 @@ static void sigchldhandler(int sig)
     }
 }
 
-static pid_t serve(int ss, int o, const char ** argv)
+static pid_t serve(int ss, int o, const char ** argv, bool wait_attach_a_while)
 {
     pid_t pid = fork(); // we'll need one fork() more for parent to wait...
     if (pid > 0) return pid;
@@ -558,7 +554,7 @@ static pid_t serve(int ss, int o, const char ** argv)
     xmovefd(ss, 0);
 
     // better chance first connect doesn't lose any terminal output
-    if (G.wait_attach_a_while) {
+    if (wait_attach_a_while) {
 	struct pollfd pfd = { .fd = 0, .events = POLLIN };
 	// 2 seconds for now
 	(void)poll(&pfd, 1, 2000); // failure unlikely
@@ -1049,10 +1045,9 @@ int main(int argc, const char * argv[])
     }
     else o = 0; // we always have fd 0 in other use (this helps serve() xdup2)
 
-    G.wait_attach_a_while = ! no_attach;
     BB;
     setenv("KEEPT_SOCKARG", sockname, 1);
-    pid_t pid = serve(s, o, argv);
+    pid_t pid = serve(s, o, argv, ! no_attach);
     int status;
     errno = 0; // waitpid could, in theory, succeed but not return pid...
     while (waitpid(pid, &status, 0) != pid) {
