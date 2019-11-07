@@ -65,7 +65,7 @@ OPTIONS
 
     Other flags:
 
-    a:  attach only -- if COMMAND [ARG] were given, those are ignored. If
+    a:  attach only -- if COMMAND [ARG] were given, those are ignored. if
         socket is not live, exit
 
     n:  execute COMMAND [ARG] but no attach. print failure if there command
@@ -85,7 +85,10 @@ OPTIONS
     z:  when (re)attaching, send ctrl-z as first input
 
     @:  in system supporting "abstract socket namespace" (linux) bind/connect
-        to socket in abstract socket namespace.
+        to socket in abstract socket namespace
+
+    u:  keept daemon unlinks the pathname/filesystem socket when it exits.
+        option ineffective when (re-)attaching
 
     -:  no-op -- provided for user convenience
 

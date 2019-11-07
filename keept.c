@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Sun 03 Nov 2019 18:32:40 +0200 too
+ * Last modified: Thu 07 Nov 2019 19:49:57 +0200 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -287,6 +287,7 @@ struct {
 	    volatile int mpfd; // serve()
 	} s;
     } u2;
+    const char * sockname_to_be_removed; // atexit
 } G;
 
 #define read_only       u1.s._read_only
@@ -315,6 +316,12 @@ static void get_winsz(void)
 	G.cols = ws.ws_col;
 	G.rows = ws.ws_row; // we'll see if these needed //
     }
+}
+
+static void unlink_socket(void)
+{
+    if (G.sockname_to_be_removed)
+	(void)unlink(G.sockname_to_be_removed);
 }
 
 static void reset_tio(void)
@@ -547,7 +554,7 @@ static pid_t serve(int ss, int o, const char ** argv, bool wait_attach_a_while)
 
     // second fork, for parent of this to wait, and grandchild to execute...
     pid = fork();
-    if (pid > 0) _exit(0);
+    if (pid > 0) _exit(0); // no atexit()s!
     if (pid < 0) die("fork failed:");
 
     StraceCS("grandchild serve() process");
@@ -1026,6 +1033,10 @@ int main(int argc, const char * argv[])
 
     if (socketfile_exists) unlink(sockname);
 
+    if (remove_socket) {
+	G.sockname_to_be_removed = sockname;
+	atexit(unlink_socket);
+    }
     s = bind_usock(sockname OPTARG_ABSTRACT_SOCKET);
     if (s < 0) {
 	errno = -s;
@@ -1048,6 +1059,7 @@ int main(int argc, const char * argv[])
     BB;
     setenv("KEEPT_SOCKARG", sockname, 1);
     pid_t pid = serve(s, o, argv, ! no_attach);
+    G.sockname_to_be_removed = NULL; // forked serve will do
     int status;
     errno = 0; // waitpid could, in theory, succeed but not return pid...
     while (waitpid(pid, &status, 0) != pid) {
@@ -1071,10 +1083,7 @@ int main(int argc, const char * argv[])
 	die("Connecting to socket failed:");
     }
     G.redraw_mode = G.redraw_mode | 128; // bit 7 for immediate first connection
-    int aret = attached(s);
-    if (remove_socket)
-	unlink(sockname); // ignore any error (socket file may have been moved)
-    return aret;
+    return attached(s);
 }
 
 /*
