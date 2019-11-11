@@ -68,14 +68,14 @@ OPTIONS
     a:  attach only -- if COMMAND [ARG] were given, those are ignored. if
         socket is not live, exit
 
-    n:  execute COMMAND [ARG] but no attach. print failure if there command
+    n:  execute COMMAND [ARG] but no attach. print failure if COMMAND [ARG]
         is not given
 
     m:  must create -- COMMAND [ARG] must be given and socket must not be
         live when this flag is there
 
-    r:  when attaching, terminal input is discarded by client (and if daemon
-        got it, it would also discard received input)
+    r:  "read only"; when attaching, terminal input is discarded by client
+        (and if daemon got it, it would also discard received input)
 
     x:  instead of sending WINCH to resize process running under keept daemon
         (attempt to) resize client terminal using common escape sequences
@@ -88,7 +88,7 @@ OPTIONS
         to socket in abstract socket namespace
 
     u:  keept daemon unlinks the pathname/filesystem socket when it exits.
-        option ineffective when (re-)attaching
+        effective only when daemon starts and executes given COMMAND [ARG]
 
     -:  no-op -- provided for user convenience
 

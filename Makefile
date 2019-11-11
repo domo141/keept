@@ -15,15 +15,19 @@ all: keept keept.1
 
 keept: $(KEEPT_OBJS)
 	$(CC) -o $@ $(KEEPT_OBJS) -lutil
+	@echo $@ done
 
-VS = keept 1.0
-VD = 2019-01-14
+VS = keept 1.1
+VD = 2019-11-11
 
 keept.1: README $(MAKEFILE)
+	@echo creating $@ if txt2man exists...
+	@which txt2man
 	sed -e 's/^  socket/  SOCKET/' -e 's/^  COMMAND.*/  COMMAND/' $< | \
 	txt2man -t keept -s 1 -r '$(VS)' -v "User commands" -d "$(VD)" | \
 	sed -e 's/SS  SOCKET/SS  socket/' -e '/SS  COMMAND/ s/$$/ [[ARG]...]/'\
 	> $@.wip; test -s $@.wip && mv $@.wip $@
+	@echo $@ done
 
 crrbuf-test: CFLAGS += -DTEST
 crrbuf-test: crrbuf.c
