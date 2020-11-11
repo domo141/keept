@@ -1,8 +1,5 @@
 #ifndef MORE_WARNINGS_H
-#define MORE_WARNINGS_H
-
-// warning options once tested with gcc 4.4.6 and newer (up to 8.x)
-// more gcc 5+ options tbd (if any) (clang defines __GNUC__ (4+?) also)
+#define MORE_WARNINGS_H 1
 
 // (Ø) public domain, like https://creativecommons.org/publicdomain/zero/1.0/
 
@@ -22,11 +19,8 @@
 // also: clang -dM -E -xc /dev/null | grep -i gnuc
 #if defined (__GNUC__)
 
-#if 1 // change to '#if 0' whenever these feels like too noisy
+#if 0 // use of -Wpadded gets complicated, 32 vs 64 bit systems
 #pragma GCC diagnostic warning "-Wpadded"
-#if __GNUC__ >= 5
-#pragma GCC diagnostic warning "-Wpedantic" // gcc 4.4.6 did not know this
-#endif
 #endif
 
 // to relax, change 'error' to 'warning' -- or even 'ignored'
@@ -36,15 +30,18 @@
 #pragma GCC diagnostic error "-Wall"
 #pragma GCC diagnostic error "-Wextra"
 
-#if __GNUC__ >= 7
+#if __GNUC__ >= 8 // impractically strict in gccs 5, 6 and 7
+#pragma GCC diagnostic error "-Wpedantic"
+#endif
+
+#if __GNUC__ >= 7 || defined (__clang__) && __clang_major__ >= 12
 
 // gcc manual says all kind of /* fall.*through */ regexp's work too
 // but perhaps only when cpp does not filter comments out. thus...
 #define FALL_THROUGH __attribute__ ((fallthrough))
 #else
 #define FALL_THROUGH ((void)0)
-
-#endif /* __GNUC__ >= 7 */
+#endif
 
 #ifndef __cplusplus
 #pragma GCC diagnostic error "-Wstrict-prototypes"
@@ -54,7 +51,7 @@
 #pragma GCC diagnostic error "-Wnested-externs"
 #endif
 
-// -Wformat=2 ¡currently! (2017-11) equivalent of the following 4
+// -Wformat=2 ¡currently! (2020-11-11) equivalent of the following 4
 #pragma GCC diagnostic error "-Wformat"
 #pragma GCC diagnostic error "-Wformat-nonliteral"
 #pragma GCC diagnostic error "-Wformat-security"
@@ -73,7 +70,10 @@
 #pragma GCC diagnostic error "-Wlogical-op"
 #endif
 
+#ifndef __cplusplus // supported by c++ compiler but perhaps not worth having
 #pragma GCC diagnostic error "-Waggregate-return"
+#endif
+
 #pragma GCC diagnostic error "-Wmissing-declarations"
 #pragma GCC diagnostic error "-Wredundant-decls"
 #pragma GCC diagnostic error "-Winline"
@@ -94,5 +94,17 @@
 #endif
 
 #endif /* defined (__GNUC__) */
+
+/* name and interface from talloc.c */
+#ifndef discard_const_p // probably never defined, but...
+//#include <stdint.h>
+#if defined (__INTPTR_TYPE__) /* e.g. gcc 4.8.5 - gcc 10.2 (2020-11-11) */
+#define discard_const_p(type, ptr) ((type *)((__INTPTR_TYPE__)(ptr)))
+#elif defined (__PTRDIFF_TYPE__) /* e.g. gcc 4.4.6 */
+#define discard_const_p(type, ptr) ((type *)((__PTRDIFF_TYPE__)(ptr)))
+#else
+#define discard_const_p(type, ptr) ((type *)(ptr))
+#endif
+#endif
 
 #endif /* MORE_WARNINGS_H */

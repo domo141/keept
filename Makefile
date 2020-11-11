@@ -13,16 +13,16 @@ CFLAGS = -std=c99 -O2
 
 all: keept keept.1
 
-keept: $(KEEPT_OBJS)
+keept: $(KEEPT_OBJS) more-warnings.h $(MAKEFILE)
 	$(CC) -o $@ $(KEEPT_OBJS) -lutil
 	@echo $@ done
 
-VS = keept 1.1
-VD = 2019-11-11
+VS = keept 1.2
+VD = 2020-11-11
 
 keept.1: README $(MAKEFILE)
 	@echo creating $@ if txt2man exists...
-	@which txt2man
+	@which txt2man || { echo 'no txt2man(1) -- ignore failure'; exit 1; }
 	sed -e 's/^  socket/  SOCKET/' -e 's/^  COMMAND.*/  COMMAND/' $< | \
 	txt2man -t keept -s 1 -r '$(VS)' -v "User commands" -d "$(VD)" | \
 	sed -e 's/SS  SOCKET/SS  socket/' -e '/SS  COMMAND/ s/$$/ [[ARG]...]/'\

@@ -6,7 +6,7 @@ NAME
 
 SYNOPSIS
 
-  keept FLAGS socket [OPTS] [COMMAND [ARG]...]
+  keept FLAGS socket [OPTS] [NAME=VALUE]... [COMMAND [ARG]...]
 
 
 DESCRIPTION
@@ -114,6 +114,10 @@ OPTIONS
                   file is initially unreadable (chmod 000) since e.g. cat(1)
                   to the file would cause live loop and file filling up
                   quickly
+
+  NAME=VALUE...
+
+    Set each NAME to VALUE in the environment (if any).
 
   COMMAND [[ARG]...]
 

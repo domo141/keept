@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Thu 07 Nov 2019 19:49:57 +0200 too
+ * Last modified: Tue 17 Nov 2020 10:44:13 +0200 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -26,6 +26,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <ctype.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <time.h>
@@ -58,6 +59,9 @@
 #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
 void execvp(const char * file, const char ** argv);
 #pragma GCC diagnostic pop
+
+// some environments have harder "unused-result" requirement (too hard for now)
+#pragma GCC diagnostic ignored "-Wunused-result"
 
 // (variable) block begin/end -- explicit liveness...
 #define BB {
@@ -116,8 +120,8 @@ void execvp(const char * file, const char ** argv);
 __attribute__((noreturn))
 static void usage(const char * prgname, int more)
 {
-    fprintf(stderr, "\nUsage: %s FLAGS socket [OPTS] [COMMAND [ARG]...]\n\n"
-	    , prgname);
+    fprintf(stderr, "\nUsage: %s FLAGS socket "
+	    "[OPTS] [NAME=VALUE]... [COMMAND [ARG]...]\n\n", prgname);
     if (more)
 #define nl "\n"
 	fprintf(stderr,
@@ -609,7 +613,7 @@ static pid_t serve(int ss, int o, const char ** argv, bool wait_attach_a_while)
 	StraceCS("serve() child");
 	login_tty(tty);
 	execvp(argv[0], argv);
-	die("execve failed:");
+	die("execve failed: %s...:", argv[0]);
     }
     /* parent */
     close(tty);
@@ -1027,6 +1031,13 @@ int main(int argc, const char * argv[])
     }
     if (attach_only)
 	die("No live socket to attach to");
+
+    for (; argc > 0; argc--, argv++) {
+	const char * p = *argv;
+	while (isalnum(*p) || *p == '_') p++;
+	if (p == *argv || *p != '=') break;
+	putenv(discard_const_p(char, *argv));
+    }
 
     if (argc == 0)
 	die("Command (and args) missing");
