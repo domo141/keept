@@ -7,7 +7,7 @@
  *          All rights reserved
  *
  * Created: Tue 11 Nov 2008 21:04:29 EET too
- * Last modified: Tue 20 Nov 2018 19:11:17 +0200 too
+ * Last modified: Wed 19 May 2021 21:01:08 +0300 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -199,7 +199,7 @@ int crrbuf_data(CrRBuf * rb, struct iovec iov[2])
 
 #if defined(TEST) && TEST
 #include <unistd.h>
-#define WriteCS(f, s) write(f, s, sizeof s - 1)
+#define WriteCS(f, s) write((f), ("" s ""), sizeof (s) - 1)
 int main(int argc, char * argv[])
 {
 	int rbsiz = 64;

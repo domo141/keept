@@ -11,7 +11,7 @@ KEEPT_OBJS = $(KEEPT_SRCS:%.c=%.o)
 # hint: make CFLAGS='-std=c99 -O2 -DDBG'
 CFLAGS = -std=c99 -O2
 
-all: keept keept.1
+all: keept.1 keept
 
 keept: $(KEEPT_OBJS) more-warnings.h $(MAKEFILE)
 	$(CC) -o $@ $(KEEPT_OBJS) -lutil
@@ -22,12 +22,12 @@ VD = 2020-11-11
 
 keept.1: README $(MAKEFILE)
 	@echo creating $@ if txt2man exists...
-	@which txt2man || { echo 'no txt2man(1) -- ignore failure'; exit 1; }
+	@which txt2man || { echo 'will not create $@'; exit; }; \
 	sed -e 's/^  socket/  SOCKET/' -e 's/^  COMMAND.*/  COMMAND/' $< | \
 	txt2man -t keept -s 1 -r '$(VS)' -v "User commands" -d "$(VD)" | \
 	sed -e 's/SS  SOCKET/SS  socket/' -e '/SS  COMMAND/ s/$$/ [[ARG]...]/'\
-	> $@.wip; test -s $@.wip && mv $@.wip $@
-	@echo $@ done
+	> $@.wip; test -s $@.wip && mv $@.wip $@; \
+	echo $@ done
 
 crrbuf-test: CFLAGS += -DTEST
 crrbuf-test: crrbuf.c

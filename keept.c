@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Tue 17 Nov 2020 10:44:13 +0200 too
+ * Last modified: Wed 19 May 2021 21:00:08 +0300 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -71,7 +71,7 @@ void execvp(const char * file, const char ** argv);
 
 #define isizeof (int)sizeof
 
-#define WriteCS(f, s) write((f), (s), sizeof (s) - 1)
+#define WriteCS(f, s) write((f), ("" s ""), sizeof (s) - 1)
 
 #if ! defined __GNUC__ || __GNUC__ < 4
 #define __attribute__(x)
