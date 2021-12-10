@@ -22,8 +22,8 @@ DESCRIPTION
   connections at will.
 
   This interface works pretty much like what dtach(1) provides, but the
-  feature set is slightly different. screen(1) and tmux(1) are more versatile
-  alternatives whenever needed.
+  feature set is slightly different. abduco(1) is similar to these.
+  screen(1) and tmux(1) are more versatile alternatives whenever needed.
 
 
 OPTIONS
@@ -155,7 +155,7 @@ EXAMPLE
 
 SEE ALSO
 
-  screen(1), dtach(1), tmux(1), script(1)
+  screen(1), dtach(1), tmux(1), abduco(1), script(1)
 
 
 BUGS
