@@ -82,7 +82,6 @@
 #pragma GCC diagnostic error "-Wuninitialized"
 
 //ragma GCC diagnostic error "-Wfloat-equal"
-//ragma GCC diagnostic error "-Werror"
 //ragma GCC diagnostic error "-Wconversion"
 
 // avoiding known problems (turning some errors set above to warnings)...

@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Wed 19 May 2021 21:00:08 +0300 too
+ * Last modified: Mon 23 Oct 2023 19:30:43 +0300 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -150,7 +150,10 @@ static void usage(const char * prgname, int more)
 		nl );
 #undef nl
     else
-	fprintf(stderr, "Enter '%s help' for more information. \n\n", prgname);
+	fprintf(stderr, "e.g.\n"
+		"  keept bm keept-sock -o keept-log /bin/sh\n"
+		"  keept ar keept-sock\n\n"
+		"Enter '%s help' for more information. \n\n", prgname);
     exit(1);
 }
 
