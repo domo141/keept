@@ -8,14 +8,12 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Mon 23 Oct 2023 19:30:43 +0300 too
+ * Last modified: Wed 25 Oct 2023 19:01:39 +0300 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
 
 /* test hint: strace -ff -o trc ./keept q asock bash --norc --noprofile */
-
-#define execvp(f,a) __xexecvp(f,a) // cheat compiler -- as result seems to work
 
 #include "more-warnings.h"
 
@@ -52,13 +50,6 @@
 #include <poll.h>
 
 #include "crrbuf.h"
-
-#undef execvp
-// this seems to get harder every time...
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
-void execvp(const char * file, const char ** argv);
-#pragma GCC diagnostic pop
 
 // some environments have harder "unused-result" requirement (too hard for now)
 #pragma GCC diagnostic ignored "-Wunused-result"
@@ -551,7 +542,7 @@ static void sigchldhandler(int sig)
     }
 }
 
-static pid_t serve(int ss, int o, const char ** argv, bool wait_attach_a_while)
+static pid_t serve(int ss, int o, char ** argv, bool wait_attach_a_while)
 {
     pid_t pid = fork(); // we'll need one fork() more for parent to wait...
     if (pid > 0) return pid;
@@ -862,7 +853,7 @@ _exit:
 }
 
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
     if (argc < 3) usage(argv[0], argc - 1); // 0 or 1, 1 for more information
 
