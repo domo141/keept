@@ -8,7 +8,7 @@
  *
  * Created: Fri 09 Oct 2015 14:41:53 EEST too
  * Resurrected: Wed Oct 24 23:04:39 2018 +0300
- * Last modified: Wed 25 Oct 2023 19:01:39 +0300 too
+ * Last modified: Fri 10 Nov 2023 22:30:31 +0200 too
  */
 
 /* SPDX-License-Identifier: BSD-2-Clause */
@@ -629,7 +629,7 @@ static pid_t serve(int ss, int o, char ** argv, bool wait_attach_a_while)
 	[0] = { .fd = 0 }, // server socket
 	[1] = { .fd = 1 } // pty
     };
-    unsigned char flags[MAXCONNS] = { 0 };
+    unsigned char flags[MAXCONNS] /*= { 0 }*/;
     int maxi = 2;
 
     for (int i = 0; i < MAXCONNS; i++) pfds[i].events = POLLIN;
@@ -660,6 +660,7 @@ static pid_t serve(int ss, int o, char ** argv, bool wait_attach_a_while)
 		else {
 		    set_nonblock(s);
 		    pfds[maxi].fd = s;
+		    flags[maxi] = 0;
 		    // check if that fd already has some data //
 		    poll(pfds + maxi++, 1, 0); // if so will be available below
 		}
