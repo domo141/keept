@@ -17,8 +17,8 @@ keept: $(KEEPT_OBJS) more-warnings.h $(MAKEFILE)
 	$(CC) -o $@ $(KEEPT_OBJS) -lutil
 	@echo $@ done
 
-VS = keept 1.2
-VD = 2020-11-11
+VS = keept 1.3
+VD = 2023-11-11
 
 keept.1: README $(MAKEFILE)
 	@echo creating $@ if txt2man exists...
